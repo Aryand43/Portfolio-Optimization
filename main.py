@@ -9,6 +9,7 @@ from scripts.metrics import (
 )
 from scripts.optimizer import optimize_portfolio
 from scripts.visualizations import plot_efficient_frontier, plot_allocation
+from scripts.simulations import monte_carlo_simulation  # Import simulations
 
 #Step 1: Load historical stock data
 print("Loading data...")
@@ -34,10 +35,21 @@ print(f"  Optimal Weights: {optimal_weights}")
 print(f"  Annualized Return: {optimized_return:.2%}")
 print(f"  Portfolio Risk (Volatility): {optimized_risk:.2%}")
 
-#Step 6: Visualize results
+#Step 6: Perform Monte Carlo Simulations
+print("\nRunning Monte Carlo simulations...")
+simulation_results = monte_carlo_simulation(annualized_returns, covariance_matrix)
+
+#Analyze simulation results
+print("\nMonte Carlo Simulation Results:")
+best_sharpe_ratio = np.max(simulation_results[2, :])
+worst_sharpe_ratio = np.min(simulation_results[2, :])
+print(f"  Best Sharpe Ratio: {best_sharpe_ratio:.2f}")
+print(f"  Worst Sharpe Ratio: {worst_sharpe_ratio:.2f}")
+
+#Step 7: Visualize results
 print("\nGenerating Efficient Frontier...")
 plot_efficient_frontier(annualized_returns, covariance_matrix)
 
 print("Generating Portfolio Allocation Pie Chart...")
-asset_names = data.columns.tolist()  # Get asset names from the dataset
+asset_names = data.columns.tolist()  #Get asset names from the dataset
 plot_allocation(optimal_weights, asset_names)

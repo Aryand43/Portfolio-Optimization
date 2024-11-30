@@ -7,19 +7,25 @@ Purpose:
 Key Steps:
 1. Calculate Sharpe Ratio:
    - Formula: (Portfolio Return - Risk-Free Rate) / Portfolio Volatility
-   - Portfolio Return: Weighted sum of returns.
-   - Portfolio Volatility: Risk derived from covariance matrix.
+   - Portfolio Return: Weighted sum of annualized returns.
+   - Portfolio Volatility: Risk calculated using the covariance matrix.
+
 2. Optimize Weights:
    - Use scipy.optimize.minimize to maximize Sharpe Ratio.
-   - Constraints: Weights sum to 1, no short-selling (0 ≤ weight ≤ 1).
+   - Constraints:
+     - Weights must sum to 1 (fully invested portfolio).
+     - Bounds on weights to limit individual stock allocations (e.g., 5%-30%).
+
 3. Output:
-   - Optimal asset allocation (weights).
+   - Optimal portfolio allocation (weights) that balances risk and return.
 
 Core Components:
 - Sharpe Ratio function (calculate_sharpe_ratio)
-- Optimization logic (optimize_portfolio)
+- Portfolio optimization logic (optimize_portfolio)
+- Advanced constraints (bounds, sum-to-1 requirement)
 
 """
+
 
 import numpy as np
 from scipy.optimize import minimize
@@ -34,9 +40,9 @@ def calculate_sharpe_ratio(weights, annualized_returns, covariance_matrix, risk_
 #Optimization function
 def optimize_portfolio(annualized_returns, covariance_matrix, risk_free_rate=0.02):
     num_assets = len(annualized_returns)
-    initial_weights = np.ones(num_assets) / num_assets  #Start with equal weights
-    bounds = [(0, 1) for _ in range(num_assets)]  #No short-selling
-    constraints = [{'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1}]  #Weights must sum to 1
+    initial_weights = np.ones(num_assets) / num_assets  # Equal allocation
+    bounds = [(0.05, 0.3) for _ in range(num_assets)]  # Min 5%, Max 30% per asset
+    constraints = [{'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1}]  # Weights sum to 1
 
     result = minimize(
         calculate_sharpe_ratio,
@@ -46,4 +52,5 @@ def optimize_portfolio(annualized_returns, covariance_matrix, risk_free_rate=0.0
         bounds=bounds,
         constraints=constraints
     )
-    return result.x  #Optimal weights
+    return result.x  # Optimal weights
+
