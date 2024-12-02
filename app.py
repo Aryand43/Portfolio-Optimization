@@ -14,7 +14,7 @@ Key Features:
    - Calculate key portfolio metrics (returns, risk, covariance).
 
 3. **Portfolio Optimization**:
-   - Use `scipy.optimize` to maximize Sharpe Ratio.
+   - Use `scipy.optimize` to maximize Sharpe Ratio, incorporating transaction costs.
    - Display optimized portfolio weights, return, and risk.
    - Calculate VaR (Value at Risk), CVaR (Conditional Value at Risk), and Maximum Drawdown (MDD) for the optimized portfolio.
 
@@ -45,7 +45,7 @@ from scripts.metrics import (
     calculate_cvar,
     calculate_max_drawdown,
 )
-from scripts.optimizer import optimize_portfolio
+from scripts.optimizer import optimize_portfolio_with_costs
 from scripts.visualizations import plot_efficient_frontier, plot_allocation
 from scripts.simulations import monte_carlo_simulation
 
@@ -57,6 +57,7 @@ st.sidebar.header("Portfolio Configuration")
 tickers = st.sidebar.text_input("Enter Stock Tickers (comma-separated)", "AAPL,MSFT,GOOG,AMZN,META")
 start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2020-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("2023-01-01"))
+transaction_cost = st.sidebar.slider("Transaction Cost (%)", min_value=0.0, max_value=5.0, step=0.1) / 100
 
 # Fetch Live Data
 @st.cache_data
@@ -91,8 +92,11 @@ if stock_data is not None:
     # Portfolio Optimization
     if st.sidebar.button("Run Optimization"):
         st.write("Optimizing portfolio...")
-        optimal_weights = optimize_portfolio(
-            annualized_returns, covariance_matrix
+        initial_weights = np.ones(len(annualized_returns)) / len(annualized_returns)  # Equal allocation
+        transaction_costs = [transaction_cost] * len(annualized_returns)  # Uniform transaction costs
+        
+        optimal_weights = optimize_portfolio_with_costs(
+            annualized_returns, covariance_matrix, initial_weights, transaction_costs
         )
         optimized_return = calculate_portfolio_return(optimal_weights, annualized_returns)
         optimized_risk = calculate_portfolio_risk(optimal_weights, covariance_matrix)
