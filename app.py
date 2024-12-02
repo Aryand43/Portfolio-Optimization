@@ -16,10 +16,12 @@ Key Features:
 3. **Portfolio Optimization**:
    - Use `scipy.optimize` to maximize Sharpe Ratio.
    - Display optimized portfolio weights, return, and risk.
+   - Calculate VaR (Value at Risk) and CVaR (Conditional Value at Risk) for the optimized portfolio.
 
 4. **Monte Carlo Simulations**:
    - Validate portfolio performance with random allocations.
    - Display best and worst Sharpe Ratios.
+   - Calculate VaR and CVaR for simulated portfolios.
 
 5. **Visualizations**:
    - Efficient Frontier: Visualize risk-return trade-offs.
@@ -43,6 +45,8 @@ from scripts.metrics import (
     calculate_covariance_matrix,
     calculate_portfolio_return,
     calculate_portfolio_risk,
+    calculate_var,
+    calculate_cvar,
 )
 from scripts.optimizer import optimize_portfolio
 from scripts.visualizations import plot_efficient_frontier, plot_allocation
@@ -84,10 +88,17 @@ if stock_data is not None:
         optimized_return = calculate_portfolio_return(optimal_weights, annualized_returns)
         optimized_risk = calculate_portfolio_risk(optimal_weights, covariance_matrix)
 
+        #Calculate VaR and CVaR
+        portfolio_returns = daily_returns.dot(optimal_weights)
+        var_95 = calculate_var(portfolio_returns, confidence_level=0.95)
+        cvar_95 = calculate_cvar(portfolio_returns, confidence_level=0.95)
+
         #Display Results
         st.write("### Optimized Portfolio Metrics")
         st.write(f"**Annualized Return:** {optimized_return:.2%}")
         st.write(f"**Portfolio Risk (Volatility):** {optimized_risk:.2%}")
+        st.write(f"**Value at Risk (VaR) at 95% Confidence Level:** {var_95:.2%}")
+        st.write(f"**Conditional Value at Risk (CVaR) at 95% Confidence Level:** {cvar_95:.2%}")
         st.write("**Optimal Weights:**")
         st.write({tickers.split(",")[i]: round(optimal_weights[i], 4) for i in range(len(optimal_weights))})
 
@@ -105,9 +116,16 @@ if stock_data is not None:
         best_sharpe = np.max(simulation_results[2, :])
         worst_sharpe = np.min(simulation_results[2, :])
 
+        #Calculate VaR and CVaR for Simulated Portfolios
+        simulated_var_95 = calculate_var(simulation_results[0, :], confidence_level=0.95)
+        simulated_cvar_95 = calculate_cvar(simulation_results[0, :], confidence_level=0.95)
+
+        #Display Monte Carlo Results
         st.write("### Monte Carlo Simulation Results")
         st.write(f"**Best Sharpe Ratio:** {best_sharpe:.2f}")
         st.write(f"**Worst Sharpe Ratio:** {worst_sharpe:.2f}")
+        st.write(f"**Simulated Value at Risk (VaR) at 95% Confidence Level:** {simulated_var_95:.2%}")
+        st.write(f"**Simulated Conditional Value at Risk (CVaR) at 95% Confidence Level:** {simulated_cvar_95:.2%}")
 
 else:
     st.warning("Failed to fetch stock data. Please check your inputs.")
