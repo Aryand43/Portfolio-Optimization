@@ -18,7 +18,7 @@ Core Components:
 import numpy as np
 from scipy.optimize import minimize
 
-#Calculate Sharpe Ratio
+# Calculate Sharpe Ratio
 def calculate_sharpe_ratio(weights, annualized_returns, covariance_matrix, risk_free_rate=0.02):
     """
     Calculate the Sharpe Ratio for a given portfolio.
@@ -37,7 +37,7 @@ def calculate_sharpe_ratio(weights, annualized_returns, covariance_matrix, risk_
     sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
     return -sharpe_ratio  # Negative because we minimize in scipy
 
-#Objective function with transaction cost penalty
+# Objective function with transaction cost penalty
 def calculate_objective_with_costs(weights, annualized_returns, covariance_matrix, initial_weights, transaction_costs, risk_free_rate=0.02):
     """
     Calculate the objective function with transaction cost penalty.
@@ -53,13 +53,13 @@ def calculate_objective_with_costs(weights, annualized_returns, covariance_matri
     Returns:
         float: Combined Sharpe Ratio and transaction cost penalty.
     """
-    #Sharpe Ratio (negative for minimization)
+    # Sharpe Ratio (negative for minimization)
     sharpe_ratio = calculate_sharpe_ratio(weights, annualized_returns, covariance_matrix, risk_free_rate)
-    #Transaction Cost Penalty
+    # Transaction Cost Penalty
     transaction_cost_penalty = np.sum(np.abs(weights - initial_weights) * transaction_costs)
     return sharpe_ratio + transaction_cost_penalty  # Combine Sharpe Ratio and transaction costs
 
-#Optimization function with transaction costs
+# Optimization function with transaction costs
 def optimize_portfolio_with_costs(annualized_returns, covariance_matrix, initial_weights=None, transaction_costs=None, risk_free_rate=0.02):
     """
     Optimize portfolio weights with transaction cost constraints.
@@ -77,10 +77,10 @@ def optimize_portfolio_with_costs(annualized_returns, covariance_matrix, initial
     num_assets = len(annualized_returns)
     initial_weights = np.ones(num_assets) / num_assets if initial_weights is None else initial_weights
     transaction_costs = np.zeros(num_assets) if transaction_costs is None else transaction_costs
-    bounds = [(0.05, 0.3) for _ in range(num_assets)]  #Min 5%, Max 30% per asset
-    constraints = [{'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1}]  #Weights sum to 1
+    bounds = [(0.05, 0.3) for _ in range(num_assets)]  # Min 5%, Max 30% per asset
+    constraints = [{'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1}]  # Weights sum to 1
 
-    #Optimize portfolio weights
+    # Optimize portfolio weights
     result = minimize(
         calculate_objective_with_costs,
         initial_weights,
@@ -91,4 +91,4 @@ def optimize_portfolio_with_costs(annualized_returns, covariance_matrix, initial
     )
     optimal_weights = result.x
 
-    return optimal_weights  #Return optimal weights only
+    return optimal_weights  # Return optimal weights only

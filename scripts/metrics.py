@@ -127,3 +127,27 @@ def calculate_max_drawdown(returns):
 
     # Return the worst drawdown (most negative), excluding invalid values
     return np.nanmin(drawdown) if not np.isnan(drawdown).all() else 0
+
+def stress_test_portfolio(portfolio_weights, asset_returns, stress_scenario):
+    """
+    Simulate portfolio performance under stress scenarios.
+
+    Args:
+        portfolio_weights (np.array): Portfolio weights.
+        asset_returns (pd.DataFrame): Historical asset returns.
+        stress_scenario (dict): Stress scenario with asset-specific shocks (e.g., {"AAPL": -0.3, "MSFT": -0.2}).
+
+    Returns:
+        dict: Metrics such as portfolio return, risk, and MDD under stress.
+    """
+    stressed_returns = asset_returns.copy()
+    for asset, shock in stress_scenario.items():
+        if asset in stressed_returns.columns:
+            stressed_returns[asset] += stressed_returns[asset] * shock
+
+    portfolio_stressed_returns = stressed_returns.dot(portfolio_weights)
+    return {
+        "stressed_return": portfolio_stressed_returns.mean(),
+        "stressed_risk": portfolio_stressed_returns.std(),
+        "stressed_mdd": calculate_max_drawdown(portfolio_stressed_returns),
+    }
