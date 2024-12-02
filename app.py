@@ -80,16 +80,24 @@ def fetch_stock_data(tickers, start_date, end_date):
             return None
         all_dates = pd.date_range(start=start_date, end=end_date)
         data = data.reindex(all_dates, method="pad")
+
+        # Drop rows/columns with too many NaNs
+        data = data.dropna(how="all")  # Drop rows where all values are NaN
+        data = data.dropna(axis=1, how="any")  # Drop columns (tickers) with any NaN
+        if data.empty:
+            st.error("Filtered data contains no valid entries. Check your inputs.")
+            return None
+
         return data
     except Exception as e:
         st.error(f"Error fetching stock data: {e}")
         return None
 
-
 def main():
     st.title("Portfolio Optimization Tool with Real-Time Data")
     st.sidebar.header("Portfolio Configuration")
 
+    # Sidebar Inputs
     tickers_input = st.sidebar.text_input("Enter Stock Tickers (comma-separated)", "AAPL,MSFT,GOOG,AMZN,META")
     tickers = validate_tickers(tickers_input)
     if not tickers:
@@ -99,106 +107,70 @@ def main():
     end_date = st.sidebar.date_input("End Date", pd.to_datetime("2023-01-01"))
     transaction_cost = st.sidebar.slider("Transaction Cost (%)", min_value=0.0, max_value=5.0, step=0.1) / 100
 
+    # Fetch Data
     stock_data = fetch_stock_data(tickers, start_date, end_date)
     if stock_data is None:
         return
 
-    st.write("### Stock Data (Full Range)")
+    st.write("### Stock Data")
     st.dataframe(stock_data)
 
+    # Calculate Metrics
     daily_returns = calculate_daily_returns(stock_data)
     annualized_returns = calculate_annualized_returns(daily_returns)
     covariance_matrix = calculate_covariance_matrix(daily_returns)
 
-    if st.sidebar.button("Run Optimization"):
-        try:
-            st.write("Optimizing portfolio...")
-            initial_weights = np.ones(len(annualized_returns)) / len(annualized_returns)
-            transaction_costs = [transaction_cost] * len(annualized_returns)
-            optimal_weights = optimize_portfolio_with_costs(
-                annualized_returns, covariance_matrix, initial_weights, transaction_costs
-            )
-            optimized_return = calculate_portfolio_return(optimal_weights, annualized_returns)
-            optimized_risk = calculate_portfolio_risk(optimal_weights, covariance_matrix)
-            portfolio_returns = daily_returns.dot(optimal_weights)
-            var_95 = calculate_var(portfolio_returns, confidence_level=0.95)
-            cvar_95 = calculate_cvar(portfolio_returns, confidence_level=0.95)
-            mdd = calculate_max_drawdown(portfolio_returns)
+    # Tabs for Organized Sections
+    tab1, tab2, tab3 = st.tabs(["Portfolio Optimization", "Stress Testing", "Simulations"])
 
-            st.write("### Optimized Portfolio Metrics")
-            st.write(f"**Annualized Return:** {optimized_return:.2%}")
-            st.write(f"**Portfolio Risk (Volatility):** {optimized_risk:.2%}")
-            st.write(f"**Maximum Drawdown (MDD):** {mdd:.2%}")
-            st.write(f"**Value at Risk (VaR) at 95% Confidence Level:** {var_95:.2%}")
-            st.write(f"**Conditional Value at Risk (CVaR) at 95% Confidence Level:** {cvar_95:.2%}")
-            weights_dict = {tickers[i]: round(optimal_weights[i], 4) for i in range(len(optimal_weights))}
-            st.write("**Optimal Weights:**")
-            st.write(weights_dict)
+    # Tab 1: Portfolio Optimization
+    with tab1:
+        st.header("Portfolio Optimization")
+        st.write("Optimize your portfolio by balancing risk and return.")
 
-            st.write("### Efficient Frontier")
-            plot_efficient_frontier(annualized_returns, covariance_matrix)
+        if st.button("Run Optimization"):
+            with st.spinner("Optimizing portfolio..."):
+                try:
+                    initial_weights = np.ones(len(annualized_returns)) / len(annualized_returns)
+                    transaction_costs = [transaction_cost] * len(annualized_returns)
+                    optimal_weights = optimize_portfolio_with_costs(
+                        annualized_returns, covariance_matrix, initial_weights, transaction_costs
+                    )
+                    # Display Results
+                    optimized_return = calculate_portfolio_return(optimal_weights, annualized_returns)
+                    optimized_risk = calculate_portfolio_risk(optimal_weights, covariance_matrix)
+                    portfolio_returns = daily_returns.dot(optimal_weights)
+                    var_95 = calculate_var(portfolio_returns, confidence_level=0.95)
+                    cvar_95 = calculate_cvar(portfolio_returns, confidence_level=0.95)
+                    mdd = calculate_max_drawdown(portfolio_returns)
 
-            st.write("### Portfolio Allocation")
-            plot_allocation(optimal_weights, tickers)
+                    st.write(f"**Annualized Return:** {optimized_return:.2%}")
+                    st.write(f"**Portfolio Risk:** {optimized_risk:.2%}")
+                    st.write(f"**MDD:** {mdd:.2%}")
+                    st.write(f"**VaR (95%):** {var_95:.2%}")
+                    st.write(f"**CVaR (95%):** {cvar_95:.2%}")
+                    plot_allocation(optimal_weights, tickers)
+                except Exception as e:
+                    st.error(f"Error during optimization: {e}")
 
-        except Exception as e:
-            st.error(f"Error during portfolio optimization: {e}")
+    # Tab 2: Stress Testing
+    with tab2:
+        st.header("Stress Testing")
+        st.write("Evaluate portfolio performance under market stress scenarios.")
+        enable_stress_test = st.checkbox("Enable Stress Testing")
+        if enable_stress_test:
+            scenario_options = {"Market Crash (-30%)": {"AAPL": -0.3}, "Inflation Spike": {"Bonds": -0.2}}
+            selected_scenario = st.selectbox("Choose Scenario", options=scenario_options.keys())
+            custom_shocks = st.text_input("Custom Scenarios (e.g., AAPL:-0.2)")
+            # Add stress testing logic here
 
-    st.sidebar.header("Stress Testing")
-    enable_stress_test = st.sidebar.checkbox("Enable Stress Testing")
-    if enable_stress_test:
-        scenario_options = {
-            "Market Crash (-30%)": {"AAPL": -0.3, "MSFT": -0.3, "GOOG": -0.3},
-            "Inflation Spike": {"AAPL": -0.05, "MSFT": -0.05, "Bonds": -0.2, "Gold": 0.1},
-        }
-        selected_scenario = st.sidebar.selectbox("Choose Scenario", options=list(scenario_options.keys()))
-        custom_shocks = st.sidebar.text_input("Custom Shocks (e.g., AAPL:-0.2,MSFT:-0.1)", value="")
-        custom_shock_dict = {}
-        if custom_shocks:
-            try:
-                custom_shock_dict = {
-                    asset.strip(): float(shock.strip())
-                    for asset, shock in [pair.split(":") for pair in custom_shocks.split(",")]
-                }
-            except ValueError:
-                st.sidebar.error("Invalid custom shock format. Use 'AAPL:-0.2,MSFT:-0.1'.")
-                custom_shock_dict = {}
-
-        if st.sidebar.button("Run Stress Test"):
-            try:
-                if 'optimal_weights' not in locals():
-                    st.error("Please run the portfolio optimization before performing stress testing.")
-                    return
-                stress_scenario = custom_shock_dict if custom_shocks else scenario_options[selected_scenario]
-                stress_scenario = {k: v for k, v in stress_scenario.items() if k in daily_returns.columns}
-                if not stress_scenario:
-                    st.error("No valid assets in the stress scenario match the portfolio. Please adjust your input.")
-                    return
-                stress_results = stress_test_portfolio(optimal_weights, daily_returns, stress_scenario)
-                st.write("### Stress Test Results")
-                st.write(f"**Stressed Return:** {stress_results['stressed_return']:.2%}")
-                st.write(f"**Stressed Risk (Volatility):** {stress_results['stressed_risk']:.2%}")
-                st.write(f"**Maximum Drawdown (MDD):** {stress_results['stressed_mdd']:.2%}")
-            except Exception as e:
-                st.error(f"Error during stress testing: {e}")
-
-    if st.sidebar.button("Run Monte Carlo Simulations"):
-        try:
-            st.write("Running Monte Carlo simulations...")
-            simulation_results = monte_carlo_simulation(annualized_returns, covariance_matrix)
-            best_sharpe = np.max(simulation_results[2, :])
-            worst_sharpe = np.min(simulation_results[2, :])
-            simulated_var_95 = calculate_var(simulation_results[0, :], confidence_level=0.95)
-            simulated_cvar_95 = calculate_cvar(simulation_results[0, :], confidence_level=0.95)
-            simulated_max_drawdown = calculate_max_drawdown(simulation_results[0, :])
-            st.write("### Monte Carlo Simulation Results")
-            st.write(f"**Best Sharpe Ratio:** {best_sharpe:.2f}")
-            st.write(f"**Worst Sharpe Ratio:** {worst_sharpe:.2f}")
-            st.write(f"**Simulated Maximum Drawdown (MDD):** {simulated_max_drawdown:.2%}")
-            st.write(f"**Simulated Value at Risk (VaR) at 95% Confidence Level:** {simulated_var_95:.2%}")
-            st.write(f"**Simulated Conditional Value at Risk (CVaR) at 95% Confidence Level:** {simulated_cvar_95:.2%}")
-        except Exception as e:
-            st.error(f"Error during Monte Carlo simulation: {e}")
+    # Tab 3: Simulations
+    with tab3:
+        st.header("Monte Carlo Simulations")
+        if st.button("Run Simulations"):
+            with st.spinner("Running Monte Carlo simulations..."):
+                # Add simulation logic here
+                pass
 
 
 if __name__ == "__main__":

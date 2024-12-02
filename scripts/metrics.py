@@ -38,6 +38,9 @@ import numpy as np
 
 #Function to calculate daily returns
 def calculate_daily_returns(data):
+    if data.isnull().any().any():
+        st.warning("NaN values detected in the input data. Cleaning the data by forward-filling.")
+        data = data.fillna(method="ffill")  # Forward-fill remaining NaN values
     return data.pct_change().dropna()
 
 #Function to calculate expected annualized returns
@@ -46,8 +49,9 @@ def calculate_annualized_returns(daily_returns):
     return mean_daily_returns * 252  # 252 trading days in a year
 
 #Function to calculate annualized covariance matrix
-def calculate_covariance_matrix(daily_returns):
-    return daily_returns.cov() * 252  # Annualize covariance
+def calculate_covariance_matrix(daily_returns, trading_days=252):
+    return daily_returns.cov() * trading_days
+
 
 #Function to calculate portfolio return
 def calculate_portfolio_return(weights, annualized_returns):
@@ -59,20 +63,9 @@ def calculate_portfolio_risk(weights, covariance_matrix):
 
 #Function to calculate Value at Risk (VaR)
 def calculate_var(returns, confidence_level=0.95):
-    """
-    Calculate the Value at Risk (VaR) for a given confidence level.
-
-    Args:
-        returns (numpy.ndarray): Array of portfolio returns.
-        confidence_level (float): Confidence level for VaR (default 95%).
-
-    Returns:
-        float: The VaR value.
-    """
-    sorted_returns = np.sort(-returns)
+    sorted_returns = np.sort(returns)  # No need for negative sorting
     var_index = int((1 - confidence_level) * len(sorted_returns))
-    var = sorted_returns[var_index]
-    return var
+    return abs(sorted_returns[var_index])  # Return positive value
 
 #Function to calculate Conditional Value at Risk (CVaR)
 def calculate_cvar(returns, confidence_level=0.95):
@@ -93,57 +86,36 @@ def calculate_cvar(returns, confidence_level=0.95):
 
 #Function to calculate Maximum Drawdown (MDD)
 def calculate_max_drawdown(returns):
-    """
-    Calculate the Maximum Drawdown (MDD) of a portfolio.
-
-    Args:
-        returns (numpy.ndarray): Array of portfolio returns.
-
-    Returns:
-        float: The Maximum Drawdown value, or 0 if invalid data is provided.
-    """
-    # Handle edge cases
     if len(returns) == 0 or np.all(np.isnan(returns)):
-        return 0  # Gracefully handle empty or invalid data
+        return 0  # Gracefully handle invalid data
 
-    # Calculate cumulative returns
     cumulative_returns = np.cumprod(1 + returns) - 1
-
-    # Safeguard against invalid cumulative returns
-    if np.all(cumulative_returns == 0) or np.all(np.isnan(cumulative_returns)):
-        return 0
-
-    # Calculate the running maximum
+    if np.all(cumulative_returns == 0):
+        return 0  # Flat returns, no drawdown
     running_max = np.maximum.accumulate(cumulative_returns)
-
-    # Safeguard against division by zero
-    running_max[running_max == 0] = np.nan
-
-    # Calculate drawdown as a percentage
     drawdown = (cumulative_returns / running_max) - 1
-
-    # Sanity check: Ensure drawdown does not exceed -100%
-    drawdown = np.clip(drawdown, -1, 0)
-
-    # Return the worst drawdown (most negative), excluding invalid values
     return np.nanmin(drawdown) if not np.isnan(drawdown).all() else 0
 
-def stress_test_portfolio(portfolio_weights, asset_returns, stress_scenario):
+def stress_test_portfolio(portfolio_weights, asset_returns, stress_scenario, mode="multiplicative"):
     """
     Simulate portfolio performance under stress scenarios.
 
     Args:
         portfolio_weights (np.array): Portfolio weights.
         asset_returns (pd.DataFrame): Historical asset returns.
-        stress_scenario (dict): Stress scenario with asset-specific shocks (e.g., {"AAPL": -0.3, "MSFT": -0.2}).
+        stress_scenario (dict): Stress scenario with asset-specific shocks.
+        mode (str): "multiplicative" (default) or "additive" for shock application.
 
     Returns:
-        dict: Metrics such as portfolio return, risk, and MDD under stress.
+        dict: Portfolio metrics under stress.
     """
     stressed_returns = asset_returns.copy()
     for asset, shock in stress_scenario.items():
         if asset in stressed_returns.columns:
-            stressed_returns[asset] += stressed_returns[asset] * shock
+            if mode == "multiplicative":
+                stressed_returns[asset] *= (1 + shock)
+            elif mode == "additive":
+                stressed_returns[asset] += shock
 
     portfolio_stressed_returns = stressed_returns.dot(portfolio_weights)
     return {
@@ -151,3 +123,4 @@ def stress_test_portfolio(portfolio_weights, asset_returns, stress_scenario):
         "stressed_risk": portfolio_stressed_returns.std(),
         "stressed_mdd": calculate_max_drawdown(portfolio_stressed_returns),
     }
+
