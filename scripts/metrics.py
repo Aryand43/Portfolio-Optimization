@@ -36,38 +36,37 @@ Usage:
 import pandas as pd
 import numpy as np
 
-#Function to calculate daily returns
+# Function to calculate daily returns
 def calculate_daily_returns(data):
     if data.isnull().any().any():
-        st.warning("NaN values detected in the input data. Cleaning the data by forward-filling.")
+        print("NaN values detected in the input data. Cleaning the data by forward-filling.")
         data = data.fillna(method="ffill")  # Forward-fill remaining NaN values
     return data.pct_change().dropna()
 
-#Function to calculate expected annualized returns
+# Function to calculate expected annualized returns
 def calculate_annualized_returns(daily_returns):
     mean_daily_returns = daily_returns.mean()
     return mean_daily_returns * 252  # 252 trading days in a year
 
-#Function to calculate annualized covariance matrix
+# Function to calculate annualized covariance matrix
 def calculate_covariance_matrix(daily_returns, trading_days=252):
     return daily_returns.cov() * trading_days
 
-
-#Function to calculate portfolio return
+# Function to calculate portfolio return
 def calculate_portfolio_return(weights, annualized_returns):
     return np.dot(weights, annualized_returns)
 
-#Function to calculate portfolio risk
+# Function to calculate portfolio risk
 def calculate_portfolio_risk(weights, covariance_matrix):
     return np.sqrt(np.dot(weights.T, np.dot(covariance_matrix, weights)))
 
-#Function to calculate Value at Risk (VaR)
+# Function to calculate Value at Risk (VaR)
 def calculate_var(returns, confidence_level=0.95):
-    sorted_returns = np.sort(returns)  # No need for negative sorting
+    sorted_returns = np.sort(returns)
     var_index = int((1 - confidence_level) * len(sorted_returns))
-    return abs(sorted_returns[var_index])  # Return positive value
+    return sorted_returns[var_index]  # Return negative value since VaR represents a loss
 
-#Function to calculate Conditional Value at Risk (CVaR)
+# Function to calculate Conditional Value at Risk (CVaR)
 def calculate_cvar(returns, confidence_level=0.95):
     """
     Calculate the Conditional Value at Risk (CVaR).
@@ -79,23 +78,47 @@ def calculate_cvar(returns, confidence_level=0.95):
     Returns:
         float: The CVaR value.
     """
-    sorted_returns = np.sort(-returns)
+    sorted_returns = np.sort(returns)
     var_index = int((1 - confidence_level) * len(sorted_returns))
-    cvar = np.mean(sorted_returns[:var_index])  # Average of returns beyond VaR
+    cvar = sorted_returns[:var_index].mean()  # Average of returns beyond VaR
     return cvar
 
-#Function to calculate Maximum Drawdown (MDD)
-def calculate_max_drawdown(returns):
-    if len(returns) == 0 or np.all(np.isnan(returns)):
-        return 0  # Gracefully handle invalid data
+# Function to calculate Maximum Drawdown (MDD)
+def calculate_max_drawdown(portfolio_returns):
+    """
+    Calculate the Maximum Drawdown (MDD) for a portfolio.
 
-    cumulative_returns = np.cumprod(1 + returns) - 1
-    if np.all(cumulative_returns == 0):
-        return 0  # Flat returns, no drawdown
-    running_max = np.maximum.accumulate(cumulative_returns)
-    drawdown = (cumulative_returns / running_max) - 1
-    return np.nanmin(drawdown) if not np.isnan(drawdown).all() else 0
+    Args:
+        portfolio_returns (pd.Series): Portfolio daily returns.
 
+    Returns:
+        float: Maximum drawdown as a negative percentage.
+    """
+    if portfolio_returns.isnull().any():
+        raise ValueError("Portfolio returns contain NaN values. Please clean the data before calculation.")
+
+    # Convert daily returns into cumulative returns
+    cumulative_returns = (1 + portfolio_returns).cumprod()
+
+    # Calculate running maximum of cumulative returns
+    running_max = cumulative_returns.cummax()
+
+    # Calculate drawdown as the percentage difference between running max and cumulative returns
+    drawdown = (cumulative_returns / running_max - 1)
+
+    # Find the maximum drawdown
+    max_drawdown = drawdown.min()
+
+    # Debugging (optional): Print intermediate results
+    print("Portfolio Returns:", portfolio_returns.head())
+    print("Cumulative Returns:", cumulative_returns.head())
+    print("Running Max:", running_max.head())
+    print("Drawdown:", drawdown.head())
+    print("Maximum Drawdown:", max_drawdown)
+
+    return max_drawdown
+
+# Function to stress test the portfolio
 def stress_test_portfolio(portfolio_weights, asset_returns, stress_scenario, mode="multiplicative"):
     """
     Simulate portfolio performance under stress scenarios.
@@ -123,4 +146,3 @@ def stress_test_portfolio(portfolio_weights, asset_returns, stress_scenario, mod
         "stressed_risk": portfolio_stressed_returns.std(),
         "stressed_mdd": calculate_max_drawdown(portfolio_stressed_returns),
     }
-
