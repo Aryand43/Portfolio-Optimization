@@ -18,29 +18,53 @@ This module contains core financial calculations for portfolio optimization.
        - mean_returns: Series of average asset returns.
        - cov_matrix: Covariance matrix of returns.
    - Output: A tuple (expected return, risk).
+
+4. calculate_sharpe_ratio:
+   - Computes the Sharpe Ratio for a portfolio.
+   - Inputs:
+       - portfolio_return: Expected portfolio return.
+       - portfolio_volatility: Portfolio risk (volatility).
+       - risk_free_rate: Default 0.02 (2%).
+   - Output: Sharpe Ratio.
+
+5. calculate_omega_ratio:
+   - Computes the Omega Ratio for a portfolio.
+   - Inputs:
+       - returns: DataFrame of portfolio returns.
+       - threshold: Threshold return (e.g., risk-free rate).
+   - Output: Omega Ratio.
 """
 
 import numpy as np
 import pandas as pd
 
+# Existing functions (calculate_returns, calculate_covariance, portfolio_performance)
+
 def calculate_returns(prices):
-    """
-    Calculate log returns of a price series.
-    """
     returns = np.log(prices / prices.shift(1))
     return returns.dropna()
 
 def calculate_covariance(returns):
-    """
-    Calculate the covariance matrix of returns.
-    """
     return returns.cov()
 
 def portfolio_performance(weights, mean_returns, cov_matrix):
-    """
-    Calculate the expected portfolio return and risk.
-    """
-    weights = np.array(weights)  # Ensure weights are a NumPy array
+    weights = np.array(weights)
     portfolio_return = np.dot(weights, mean_returns)
     portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
     return portfolio_return, portfolio_volatility
+
+def calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate=0.02):
+    """
+    Calculate the Sharpe Ratio for a portfolio.
+    """
+    return (portfolio_return - risk_free_rate) / portfolio_volatility
+
+def calculate_omega_ratio(returns, threshold=0.02):
+    """
+    Calculate the Omega Ratio for a portfolio.
+    """
+    excess_returns = returns - threshold
+    positive_excess = excess_returns[excess_returns > 0].sum()
+    negative_excess = -excess_returns[excess_returns <= 0].sum()
+    return positive_excess / negative_excess
+
