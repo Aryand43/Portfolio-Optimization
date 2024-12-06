@@ -33,6 +33,26 @@ This module contains core financial calculations for portfolio optimization.
        - returns: DataFrame of portfolio returns.
        - threshold: Threshold return (e.g., risk-free rate).
    - Output: Omega Ratio.
+
+6. calculate_var:
+   - Computes Value at Risk (VaR) at a specified confidence level.
+   - Inputs:
+       - returns: Series of portfolio returns.
+       - confidence_level: The confidence level for VaR calculation (e.g., 0.95).
+   - Output: Value at Risk.
+
+7. calculate_cvar:
+   - Computes Conditional Value at Risk (CVaR) for the portfolio.
+   - Inputs:
+       - returns: Series of portfolio returns.
+       - confidence_level: The confidence level for CVaR calculation.
+   - Output: Conditional Value at Risk.
+
+8. calculate_max_drawdown:
+   - Computes the Maximum Drawdown of the portfolio.
+   - Inputs:
+       - portfolio_values: Series of portfolio values over time.
+   - Output: Maximum Drawdown.
 """
 
 import numpy as np
@@ -68,3 +88,27 @@ def calculate_omega_ratio(returns, threshold=0.02):
     negative_excess = -excess_returns[excess_returns <= 0].sum()
     return positive_excess / negative_excess
 
+# VaR calculation
+def calculate_var(returns, confidence_level=0.95):
+    """
+    Calculate the Value at Risk (VaR) at a given confidence level.
+    """
+    return np.percentile(returns, (1 - confidence_level) * 100)
+
+# CVaR calculation
+def calculate_cvar(returns, confidence_level=0.95):
+    """
+    Calculate the Conditional Value at Risk (CVaR) at a given confidence level.
+    """
+    var = calculate_var(returns, confidence_level)
+    cvar = returns[returns <= var].mean()
+    return cvar
+
+# Maximum Drawdown calculation
+def calculate_max_drawdown(portfolio_values):
+    """
+    Calculate the Maximum Drawdown of a portfolio.
+    """
+    cumulative_max = portfolio_values.cummax()
+    drawdowns = (portfolio_values - cumulative_max) / cumulative_max
+    return drawdowns.min()

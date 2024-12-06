@@ -29,6 +29,9 @@ from src.calculations.metrics import (
     portfolio_performance,
     calculate_sharpe_ratio,
     calculate_omega_ratio,
+    calculate_var,               # Ensure these functions are imported
+    calculate_cvar,
+    calculate_max_drawdown,
 )
 
 
@@ -82,3 +85,27 @@ def test_calculate_omega_ratio():
     threshold = 0.02
     omega_ratio = calculate_omega_ratio(returns, threshold)
     assert round(omega_ratio, 2) == 2.75, "Omega Ratio calculation failed"
+
+def test_calculate_var():
+    """
+    Tests the calculation of Value at Risk (VaR).
+    """
+    returns = pd.Series([-0.02, -0.01, 0.0, 0.01, 0.03])
+    var = calculate_var(returns, confidence_level=0.95)
+    assert round(var, 2) == -0.02, "VaR calculation failed"
+
+def test_calculate_cvar():
+    """
+    Tests the calculation of Conditional Value at Risk (CVaR).
+    """
+    returns = pd.Series([-0.02, -0.01, 0.0, 0.01, 0.03])
+    cvar = calculate_cvar(returns, confidence_level=0.95)
+    assert round(cvar, 2) == -0.02, "CVaR calculation failed"
+
+def test_calculate_max_drawdown():
+    """
+    Tests the calculation of Maximum Drawdown (MDD).
+    """
+    portfolio_values = pd.Series([100, 105, 90, 95, 110])
+    max_drawdown = calculate_max_drawdown(portfolio_values)
+    assert round(max_drawdown, 2) == -0.14, "Maximum Drawdown calculation failed"
