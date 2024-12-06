@@ -12,7 +12,7 @@ Functions:
    - Input: Ticker symbol.
    - Output: Latest price and timestamp.
 """
-
+from joblib import Memory
 import yfinance as yf
 
 def get_historical_data(ticker, start_date, end_date):
@@ -48,3 +48,42 @@ def get_batch_realtime_data(tickers):
         }
     return results
 
+def get_historical_data_for_asset_class(asset_type, symbols, start_date, end_date):
+    """
+    Fetch historical data for a specific asset class (stocks, indices, forex, crypto).
+    """
+    if asset_type == "stocks":
+        data = yf.download(symbols, start=start_date, end=end_date, group_by='ticker')
+    elif asset_type == "forex":
+        # Forex tickers in yfinance usually use pair symbols like "EURUSD=X"
+        data = yf.download(symbols, start=start_date, end=end_date, group_by='ticker')
+    elif asset_type == "crypto":
+        # Crypto tickers in yfinance usually use symbols like "BTC-USD"
+        data = yf.download(symbols, start=start_date, end=end_date, group_by='ticker')
+    elif asset_type == "indices":
+        # Index tickers like "^GSPC" for S&P 500
+        data = yf.download(symbols, start=start_date, end=end_date, group_by='ticker')
+    else:
+        raise ValueError("Invalid asset type. Choose from: stocks, indices, forex, crypto")
+    return data
+
+def get_realtime_data_for_asset_class(asset_type, symbols):
+    """
+    Fetch real-time data for a specific asset class (stocks, indices, forex, crypto).
+    """
+    results = {}
+    for symbol in symbols:
+        stock = yf.Ticker(symbol)
+        latest_data = stock.history(period="1d")
+        results[symbol] = {
+            "price": latest_data["Close"].iloc[-1],
+            "timestamp": latest_data.index[-1]
+        }
+    return results
+
+# Setup cache directory
+memory = Memory("./data_cache", verbose=0)
+
+@memory.cache
+def get_cached_historical_data(asset_type, symbols, start_date, end_date):
+    return get_historical_data_for_asset_class(asset_type, symbols, start_date, end_date)
