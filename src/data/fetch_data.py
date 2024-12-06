@@ -32,3 +32,19 @@ def get_realtime_data(ticker):
         "price": latest_data["Close"].iloc[-1],
         "timestamp": latest_data.index[-1]
     }
+
+def get_batch_historical_data(tickers, start_date, end_date):
+    data = yf.download(tickers, start=start_date, end=end_date, group_by='ticker')
+    return data
+
+def get_batch_realtime_data(tickers):
+    results = {}
+    for ticker in tickers:
+        stock = yf.Ticker(ticker)
+        latest_data = stock.history(period="1d")
+        results[ticker] = {
+            "price": latest_data["Close"].iloc[-1],
+            "timestamp": latest_data.index[-1]
+        }
+    return results
+
