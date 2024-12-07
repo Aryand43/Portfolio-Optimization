@@ -116,8 +116,18 @@ def calculate_cvar(returns, confidence_level=0.95):
 
 def calculate_max_drawdown(portfolio_values):
     """
-    Calculate the Maximum Drawdown for the portfolio.
+    Calculate the Maximum Drawdown (MDD) for a portfolio.
+
+    Parameters:
+        portfolio_values (array-like): Portfolio values over time.
+
+    Returns:
+        float: Maximum Drawdown value.
     """
+    if isinstance(portfolio_values, np.ndarray):  # Handle NumPy arrays
+        portfolio_values = pd.Series(portfolio_values)
+
     cumulative_max = portfolio_values.cummax()
-    drawdowns = (portfolio_values - cumulative_max) / cumulative_max
-    return drawdowns.min()
+    drawdown = (portfolio_values - cumulative_max) / cumulative_max
+    max_drawdown = drawdown.min()
+    return max_drawdown

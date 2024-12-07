@@ -1,7 +1,7 @@
-import os
 from src.data.fetch_data import get_cached_historical_data
 from src.simulations.monte_carlo import monte_carlo_with_metrics
 from src.visualizations.plot_monte_carlo_with_metrics import plot_monte_carlo_with_metrics
+import os
 
 def run_monte_carlo_with_visualization(tickers, start_date, end_date, num_simulations=1000, time_horizon=252):
     """
@@ -19,7 +19,7 @@ def run_monte_carlo_with_visualization(tickers, start_date, end_date, num_simula
 
     print("Running Monte Carlo simulations with metrics...")
     try:
-        metrics, portfolio_values = monte_carlo_with_metrics(returns, num_simulations, time_horizon)
+        metrics_df, portfolio_values = monte_carlo_with_metrics(returns, num_simulations, time_horizon)
     except Exception as e:
         print(f"Error during Monte Carlo metrics calculation: {e}")
         return
@@ -30,7 +30,7 @@ def run_monte_carlo_with_visualization(tickers, start_date, end_date, num_simula
     save_path = os.path.join(save_dir, "monte_carlo_with_metrics.png")
 
     try:
-        plot_monte_carlo_with_metrics(portfolio_values, metrics, save_path=save_path)
+        plot_monte_carlo_with_metrics(portfolio_values, metrics_df, save_path=save_path)
     except Exception as e:
         print(f"Error during visualization: {e}")
 

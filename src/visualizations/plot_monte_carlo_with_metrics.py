@@ -1,39 +1,45 @@
 # src/visualizations/plot_monte_carlo_with_metrics.py
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def plot_monte_carlo_with_metrics(portfolio_values, metrics, save_path=None):
+def plot_monte_carlo_with_metrics(portfolio_values, metrics_df, save_path=None):
     """
-    Plot Monte Carlo simulated portfolio paths with calculated metrics.
+    Plot Monte Carlo simulated portfolio paths and overlay risk metrics.
 
     Parameters:
         portfolio_values (pd.DataFrame): Simulated portfolio values over time.
-        metrics (pd.DataFrame): Metrics calculated for the Monte Carlo simulations.
-        save_path (str): Path to save the plot (optional).
+        metrics_df (pd.DataFrame): Calculated metrics (Sharpe, VaR, CVaR, etc.).
+        save_path (str): Path to save the figure (optional).
     """
     plt.figure(figsize=(12, 6))
 
-    # Plot all portfolio paths
-    plt.plot(portfolio_values, alpha=0.1, color="blue", label="Simulated Paths")
+    # Plot all simulated paths without labels to avoid clutter
+    plt.plot(portfolio_values, alpha=0.1, color="blue", linewidth=0.5)
 
-    # Overlay metrics as annotations or thresholds
-    sharpe_ratio_mean = metrics["Sharpe Ratio"].mean()
-    omega_ratio_mean = metrics["Omega Ratio"].mean()
+    # Overlay mean metrics summary
+    sharpe_ratio = metrics_df["Sharpe Ratio"].mean()
+    var_95 = metrics_df["VaR (95%)"].mean()
+    cvar_95 = metrics_df["CVaR (95%)"].mean()
+    max_drawdown = metrics_df["Max Drawdown"].mean()
+    omega_ratio = metrics_df["Omega Ratio"].mean()
 
-    plt.axhline(y=portfolio_values.iloc[0, 0], color="red", linestyle="--", label="Initial Portfolio Value")
-    plt.axhline(y=portfolio_values.mean().mean(), color="purple", linestyle="-.", label="Mean Portfolio Value")
+    metrics_text = (f"Mean Sharpe Ratio: {sharpe_ratio:.2f}\n"
+                    f"Mean VaR (95%): {var_95:.2f}\n"
+                    f"Mean CVaR (95%): {cvar_95:.2f}\n"
+                    f"Mean Max Drawdown: {max_drawdown:.2f}\n"
+                    f"Mean Omega Ratio: {omega_ratio:.2f}")
+
+    # Add a text box with the metrics
+    plt.text(0.02, 0.85, metrics_text, transform=plt.gca().transAxes,
+             fontsize=10, bbox=dict(facecolor='white', alpha=0.8))
 
     plt.title("Monte Carlo Simulated Portfolio Paths with Risk Metrics")
     plt.xlabel("Days")
     plt.ylabel("Portfolio Value")
     plt.grid(True)
 
-    # Add metrics in the legend
-    plt.figtext(0.15, 0.01, f"Sharpe Ratio: {sharpe_ratio_mean:.2f} | Omega Ratio: {omega_ratio_mean:.2f}", 
-                fontsize=10, ha="left", bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
-
-    plt.legend()
-
+    # Save the plot if a path is provided
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Plot saved to: {save_path}")
