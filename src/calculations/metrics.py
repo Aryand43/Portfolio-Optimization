@@ -73,41 +73,50 @@ def portfolio_performance(weights, mean_returns, cov_matrix):
     portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
     return portfolio_return, portfolio_volatility
 
-def calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate=0.02):
+def calculate_sharpe_ratio(returns, risk_free_rate=0.01):
     """
     Calculate the Sharpe Ratio for a portfolio.
     """
-    return (portfolio_return - risk_free_rate) / portfolio_volatility
+    excess_returns = returns.mean() - risk_free_rate
+    volatility = returns.std()
+    return excess_returns / volatility if volatility != 0 else 0
 
-def calculate_omega_ratio(returns, threshold=0.02):
+def calculate_omega_ratio(returns, threshold=0.0):
     """
-    Calculate the Omega Ratio for a portfolio.
-    """
-    excess_returns = returns - threshold
-    positive_excess = excess_returns[excess_returns > 0].sum()
-    negative_excess = -excess_returns[excess_returns <= 0].sum()
-    return positive_excess / negative_excess
+    Calculate the Omega Ratio of the portfolio.
 
-# VaR calculation
+    Parameters:
+        returns: pd.Series - Asset returns.
+        threshold: float - Minimum acceptable return (default is 0%).
+
+    Returns:
+        Omega Ratio as a float.
+    """
+    excess_gains = returns[returns > threshold] - threshold
+    excess_losses = threshold - returns[returns <= threshold]
+
+    if excess_losses.sum() == 0:
+        return float('inf')  # If no losses, Omega Ratio is infinite.
+
+    return excess_gains.sum() / excess_losses.sum()
+
+
 def calculate_var(returns, confidence_level=0.95):
     """
-    Calculate the Value at Risk (VaR) at a given confidence level.
+    Calculate the Value at Risk (VaR) for the portfolio.
     """
     return np.percentile(returns, (1 - confidence_level) * 100)
 
-# CVaR calculation
 def calculate_cvar(returns, confidence_level=0.95):
     """
-    Calculate the Conditional Value at Risk (CVaR) at a given confidence level.
+    Calculate the Conditional Value at Risk (CVaR) for the portfolio.
     """
     var = calculate_var(returns, confidence_level)
-    cvar = returns[returns <= var].mean()
-    return cvar
+    return returns[returns <= var].mean()
 
-# Maximum Drawdown calculation
 def calculate_max_drawdown(portfolio_values):
     """
-    Calculate the Maximum Drawdown of a portfolio.
+    Calculate the Maximum Drawdown for the portfolio.
     """
     cumulative_max = portfolio_values.cummax()
     drawdowns = (portfolio_values - cumulative_max) / cumulative_max
