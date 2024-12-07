@@ -1,1 +1,1 @@
-{"duration": 3.9300012588500977, "input_args": {"asset_type": "'stocks'", "symbols": "['AAPL', 'MSFT']", "start_date": "'2022-01-01'", "end_date": "'2022-12-31'"}, "time": 1733534236.6480048}
+{"duration": 0.0643317699432373, "input_args": {"asset_type": "'stocks'", "symbols": "['AAPL', 'MSFT']", "start_date": "'2022-01-01'", "end_date": "'2022-12-31'"}, "time": 1733571118.9882388}
