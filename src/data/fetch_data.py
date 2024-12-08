@@ -87,29 +87,26 @@ def get_historical_data_for_asset_class(asset_type, symbols, start_date, end_dat
 
 def get_realtime_data_for_asset_class(asset_type, symbols):
     """
-    Fetch real-time prices for a specific asset class.
-
-    Parameters:
-        asset_type (str): "stocks", "indices", "forex", or "crypto".
-        symbols (list): List of ticker symbols.
-
+    Fetch real-time data for a specific asset class (stocks, indices, forex, crypto).
     Returns:
         dict: Real-time prices and timestamps.
     """
-    if asset_type not in {"stocks", "indices", "forex", "crypto"}:
-        raise ValueError("Invalid asset type. Choose from: stocks, indices, forex, crypto.")
-    
     results = {}
     for symbol in symbols:
         try:
             stock = yf.Ticker(symbol)
             latest_data = stock.history(period="1d")
-            results[symbol] = {
-                "price": latest_data["Close"].iloc[-1],
-                "timestamp": latest_data.index[-1]
-            }
+            if not latest_data.empty:
+                results[symbol] = {
+                    "price": latest_data["Close"].iloc[-1],
+                    "timestamp": latest_data.index[-1]
+                }
+            else:
+                print(f"No real-time data for {symbol}")
+                results[symbol] = {"price": None, "timestamp": None}
         except Exception as e:
-            results[symbol] = {"error": str(e)}
+            print(f"Failed to fetch real-time data for {symbol}: {e}")
+            results[symbol] = {"price": None, "timestamp": None}
     return results
 
 @memory.cache
